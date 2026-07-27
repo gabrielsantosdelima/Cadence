@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Cadence.Contracts/Cadence.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/Repertoire/">
+    <Project Path="src/Repertoire/Cadence.Repertoire.Domain/Cadence.Repertoire.Domain.csproj" />
+    <Project Path="src/Repertoire/Cadence.Repertoire.Infrastructure/Cadence.Repertoire.Infrastructure.csproj" />
+    <Project Path="src/Repertoire/Cadence.Repertoire.Api/Cadence.Repertoire.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Practice/">
+    <Project Path="src/Practice/Cadence.Practice.Domain/Cadence.Practice.Domain.csproj" />
+    <Project Path="src/Practice/Cadence.Practice.Infrastructure/Cadence.Practice.Infrastructure.csproj" />
+    <Project Path="src/Practice/Cadence.Practice.Api/Cadence.Practice.Api.csproj" />
+  </Folder>
+</Solution>

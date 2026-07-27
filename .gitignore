@@ -1,0 +1,30 @@
+# Local-only planning docs — never commit
+plan.md
+TASKS.md
+TASKS-CUT.md
+
+# Build output
+bin/
+obj/
+out/
+
+# EF Core / SQLite local databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# User-specific
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+
+# Rider / ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# OS
+.DS_Store
+Thumbs.db
