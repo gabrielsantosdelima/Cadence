@@ -6,4 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Cadence.Repertoire.Domain\Cadence.Repertoire.Domain.csproj" />
+    <ProjectReference Include="..\Cadence.Repertoire.Infrastructure\Cadence.Repertoire.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
