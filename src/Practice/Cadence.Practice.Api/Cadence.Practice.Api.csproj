@@ -6,4 +6,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Cadence.Practice.Domain\Cadence.Practice.Domain.csproj" />
+    <ProjectReference Include="..\Cadence.Practice.Infrastructure\Cadence.Practice.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Cadence.Contracts\Cadence.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>
