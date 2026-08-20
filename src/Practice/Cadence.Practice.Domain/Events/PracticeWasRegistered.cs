@@ -9,5 +9,5 @@ namespace Cadence.Practice.Domain.Events
         DateTime StartedAtUtc,
         int Minutes,
         int Rating,
-        PracticeFocus Focus) : IDomainEvent;
+        PracticeFocusEnum Focus) : IDomainEvent;
 }

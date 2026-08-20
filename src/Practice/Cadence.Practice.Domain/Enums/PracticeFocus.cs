@@ -1,6 +1,6 @@
 namespace Cadence.Practice.Domain.Enums
 {
-    public enum PracticeFocus
+    public enum PracticeFocusEnum
     {
         SightReading = 0,
         Technique = 1,

@@ -8,7 +8,7 @@ namespace Cadence.Practice.Api.Contracts
         DateTime StartedAtUtc,
         int DurationMinutes,
         int? TempoBpm,
-        PracticeFocus Focus,
+        PracticeFocusEnum Focus,
         int Quality,
         string? Notes);
 }

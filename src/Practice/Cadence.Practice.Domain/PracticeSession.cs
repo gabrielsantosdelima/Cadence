@@ -30,7 +30,7 @@ namespace Cadence.Practice.Domain
             DateTime startedAtUtc,
             PracticeDuration duration,
             Tempo? tempo,
-            PracticeFocus focus,
+            PracticeFocusEnum focus,
             QualityRating quality,
             string? notes,
             DateTime nowUtc)
