@@ -1,8 +1,11 @@
 using Cadence.Practice.Api.Contracts;
+using Cadence.Practice.Api.Handlers;
 using Cadence.Practice.Domain;
+using Cadence.Practice.Domain.Events;
 using Cadence.Practice.Domain.Ids;
 using Cadence.Practice.Domain.ValueObjects;
 using Cadence.Practice.Infrastructure;
+using MassTransit;
 
 namespace Cadence.Practice.Api.Endpoints
 {
@@ -23,6 +26,8 @@ namespace Cadence.Practice.Api.Endpoints
             CreateSessionRequest request,
             ISessionRepository sessionRepository,
             PracticeDbContext dbContext,
+            IPublishEndpoint publishEndpoint,
+            ILogger<PracticeSession> logger,
             CancellationToken cancellationToken)
         {
             Result<PieceReference> pieceReferenceResult = PieceReference.Create(
@@ -64,6 +69,11 @@ namespace Cadence.Practice.Api.Endpoints
             PracticeSession session = sessionResult.Value;
             sessionRepository.Add(session);
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            foreach (PracticeWasRegistered domainEvent in session.DomainEvents.OfType<PracticeWasRegistered>())
+                await PracticeWasRegisteredHandler.PublishAsync(domainEvent, publishEndpoint, logger, cancellationToken);
+
+            session.ClearDomainEvents();
 
             return Results.Created($"/sessions/{session.Id}", SessionResponse.From(session));
         }

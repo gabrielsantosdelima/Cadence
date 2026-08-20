@@ -1,6 +1,7 @@
 using Cadence.Practice.Api.Endpoints;
 using Cadence.Practice.Domain;
 using Cadence.Practice.Infrastructure;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 
@@ -14,6 +15,17 @@ builder.Services.AddDbContext<PracticeDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Practice") ?? "Data Source=practice.db"));
 
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
+
+builder.Services.AddMassTransit(busConfigurator =>
+{
+    busConfigurator.SetKebabCaseEndpointNameFormatter();
+
+    busConfigurator.UsingRabbitMq((context, rabbitMqConfigurator) =>
+    {
+        rabbitMqConfigurator.Host(new Uri(rabbitMqConnectionString));
+        rabbitMqConfigurator.ConfigureEndpoints(context);
+    });
+});
 
 builder.Services.AddCors(options =>
 {

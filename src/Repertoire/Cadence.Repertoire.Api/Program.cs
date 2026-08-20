@@ -1,6 +1,8 @@
+using Cadence.Repertoire.Api.Consumers;
 using Cadence.Repertoire.Api.Endpoints;
 using Cadence.Repertoire.Domain;
 using Cadence.Repertoire.Infrastructure;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 
@@ -16,6 +18,26 @@ builder.Services.AddDbContext<RepertoireDbContext>(options =>
 builder.Services.AddScoped<IPieceRepository, PieceRepository>();
 builder.Services.AddScoped<IUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<RepertoireDbContext>());
 builder.Services.AddSingleton<IDomainEventDispatcher, DomainEventDispatcher>();
+
+builder.Services.AddMassTransit(busConfigurator =>
+{
+    busConfigurator.SetKebabCaseEndpointNameFormatter();
+
+    busConfigurator.AddConsumer<PracticeSessionRegisteredConsumer>();
+
+    busConfigurator.UsingRabbitMq((context, rabbitMqConfigurator) =>
+    {
+        rabbitMqConfigurator.Host(new Uri(rabbitMqConnectionString));
+
+        rabbitMqConfigurator.ReceiveEndpoint("practice-session-registered", receiveEndpointConfigurator =>
+        {
+            receiveEndpointConfigurator.UseMessageRetry(retryConfigurator =>
+                retryConfigurator.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2)));
+
+            receiveEndpointConfigurator.ConfigureConsumer<PracticeSessionRegisteredConsumer>(context);
+        });
+    });
+});
 
 builder.Services.AddCors(options =>
 {

@@ -44,9 +44,10 @@ namespace Cadence.Repertoire.Api.Consumers
             if (piece is null)
             {
                 _logger.LogWarning(
-                    "Ignoring PracticeSessionRegistered for unknown PieceId {PieceId} and SessionId {SessionId}",
+                    "Ignoring PracticeSessionRegistered for unknown PieceId {PieceId} and SessionId {SessionId} (MessageId {MessageId})",
                     integrationEvent.PieceId,
-                    integrationEvent.SessionId);
+                    integrationEvent.SessionId,
+                    messageId);
                 return;
             }
 
