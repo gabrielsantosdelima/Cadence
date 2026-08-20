@@ -13,7 +13,7 @@ namespace Cadence.Practice.Domain
         public DateTime StartedAtUtc { get; private set; }
         public PracticeDuration Duration { get; private set; }
         public Tempo? Tempo { get; private set; }
-        public PracticeFocus Focus { get; private set; }
+        public PracticeFocusEnum Focus { get; private set; }
         public QualityRating Quality { get; private set; }
         public string? Notes { get; private set; }
         public DateTime CreatedAtUtc { get; private set; }
