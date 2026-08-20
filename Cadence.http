@@ -1,0 +1,151 @@
+@repertoire = http://localhost:5001
+@practice = http://localhost:5002
+
+### 1. Health check — Repertoire
+GET {{repertoire}}/health
+
+### 2. Health check — Practice
+GET {{practice}}/health
+
+### 3. Create a piece (Repertoire) — 201 Created
+# @name createPiece
+POST {{repertoire}}/pieces
+Content-Type: application/json
+
+{
+  "title": "Nocturne in E-flat major, Op. 9 No. 2",
+  "composer": "Frederic Chopin",
+  "genre": 2,
+  "difficulty": 2,
+  "key": "E-flat major",
+  "referenceUrl": "https://imslp.org/wiki/Nocturnes,_Op.9_(Chopin,_Frederic)"
+}
+
+### 4. List pieces (Repertoire)
+GET {{repertoire}}/pieces
+
+### 5. List pieces filtered by status/genre (Repertoire)
+GET {{repertoire}}/pieces?status=0&genre=2
+
+### 6. Get a single piece by id — replace {{pieceId}} with the id from step 3's response
+@pieceId = 00000000-0000-0000-0000-000000000000
+GET {{repertoire}}/pieces/{{pieceId}}
+
+### 7. Update piece details (Repertoire) — cannot touch Status or Record
+PUT {{repertoire}}/pieces/{{pieceId}}
+Content-Type: application/json
+
+{
+  "title": "Nocturne in E-flat major, Op. 9 No. 2",
+  "composer": "Frederic Chopin",
+  "genre": 2,
+  "difficulty": 2,
+  "key": "E-flat major",
+  "referenceUrl": "https://imslp.org/wiki/Nocturnes,_Op.9_(Chopin,_Frederic)"
+}
+
+### 8. Register a practice session (Practice) — 201 Created, publishes PracticeSessionRegistered
+# @name createSession
+POST {{practice}}/sessions
+Content-Type: application/json
+
+{
+  "pieceId": "{{pieceId}}",
+  "pieceTitle": "Nocturne in E-flat major, Op. 9 No. 2",
+  "startedAtUtc": "2026-08-19T18:00:00Z",
+  "durationMinutes": 25,
+  "tempoBpm": 66,
+  "focus": 1,
+  "quality": 4,
+  "notes": "Worked the left-hand arpeggios slowly"
+}
+
+### 9. List sessions (Practice)
+GET {{practice}}/sessions
+
+### 10. List sessions filtered by piece/date range (Practice)
+GET {{practice}}/sessions?pieceId={{pieceId}}&from=2026-08-01T00:00:00Z&to=2026-08-31T00:00:00Z
+
+### 11. Get a single session by id — replace with the id from step 8's response
+@sessionId = 00000000-0000-0000-0000-000000000000
+GET {{practice}}/sessions/{{sessionId}}
+
+### 12. Re-fetch the piece (Repertoire) — after a moment, Record should reflect step 8
+# and Status should have moved Backlog -> Learning automatically
+GET {{repertoire}}/pieces/{{pieceId}}
+
+### 13. Try to master a piece with zero practice sessions — expect 409
+POST {{repertoire}}/pieces
+Content-Type: application/json
+
+{
+  "title": "Etude that has never been practiced",
+  "composer": null,
+  "genre": 7,
+  "difficulty": 0,
+  "key": null,
+  "referenceUrl": null
+}
+
+###
+# @name createUnpracticedPiece
+POST {{repertoire}}/pieces
+Content-Type: application/json
+
+{
+  "title": "Etude that has never been practiced",
+  "composer": null,
+  "genre": 7,
+  "difficulty": 0,
+  "key": null,
+  "referenceUrl": null
+}
+
+### 14. Change status straight to Mastered without practice — expect 409 Conflict
+@unpracticedPieceId = 00000000-0000-0000-0000-000000000000
+PATCH {{repertoire}}/pieces/{{unpracticedPieceId}}/status
+Content-Type: application/json
+
+{
+  "status": "Mastered"
+}
+
+### 15. Change status through the legal path: Learning -> Polishing
+PATCH {{repertoire}}/pieces/{{pieceId}}/status
+Content-Type: application/json
+
+{
+  "status": "Polishing"
+}
+
+### 16. Change status: Polishing -> Mastered (now legal, session exists)
+PATCH {{repertoire}}/pieces/{{pieceId}}/status
+Content-Type: application/json
+
+{
+  "status": "Mastered"
+}
+
+### 17. Delete a piece (Repertoire) — 204 No Content
+DELETE {{repertoire}}/pieces/{{pieceId}}
+
+### 18. Get a deleted / unknown piece — 404
+GET {{repertoire}}/pieces/{{pieceId}}
+
+### 19. Get an unknown session — 404
+GET {{practice}}/sessions/00000000-0000-0000-0000-000000000000
+
+### 20. Malformed request — invalid focus/quality — 400 Problem Details
+POST {{practice}}/sessions
+Content-Type: application/json
+
+{
+  "pieceId": "{{pieceId}}",
+  "pieceTitle": "Whatever",
+  "startedAtUtc": "2026-08-19T18:00:00Z",
+  "durationMinutes": 25,
+  "tempoBpm": 66,
+  "focus": 1,
+  "quality": 9,
+  "notes": null
+}
