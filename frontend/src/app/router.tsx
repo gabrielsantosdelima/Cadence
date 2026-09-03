@@ -1,5 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
+import { CreatePiecePage } from '../features/pieces/CreatePiecePage'
+import { EditPiecePage } from '../features/pieces/EditPiecePage'
 import { PiecesListPage } from '../features/pieces/PiecesListPage'
 
 function NotFoundPage() {
@@ -23,14 +25,14 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <PiecesListPage /> },
-      { path: 'pieces/new', element: <PlaceholderPage label="Create piece" /> },
+      { path: 'pieces/new', element: <CreatePiecePage /> },
       {
         path: 'pieces/:pieceId',
         element: <PlaceholderPage label="Piece detail" />,
       },
       {
         path: 'pieces/:pieceId/edit',
-        element: <PlaceholderPage label="Edit piece" />,
+        element: <EditPiecePage />,
       },
       { path: '*', element: <NotFoundPage /> },
     ],
