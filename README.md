@@ -124,6 +124,17 @@ the piece's practice record is updated by the RabbitMQ consumer, not by
 that request. No optimistic write pretends the record already caught up —
 the piece detail view is expected to refetch on a short delay instead,
 making the eventual consistency visible rather than hidden.
+[`useRecordRefresh`](frontend/src/features/pieces/useRecordRefresh.ts)
+invalidates the piece detail query and re-polls it a few times (800ms,
+1.6s, 3s) after a session is logged, stopping early once `sessionCount`
+goes up. It refetches rather than patches the record locally because the
+incremental average in `PracticeRecord.Register` (rounded, and
+order-sensitive on `LastPracticedAtUtc`) lives in the Repertoire domain —
+recomputing it client-side would mean duplicating that arithmetic and
+risking drift from whatever the aggregate actually produced. Same
+reasoning that keeps the arithmetic out of the consumer itself. A visible
+"Refresh" / "Updating…" control on the piece detail page covers the case
+where the poll window closes before the consumer finishes.
 
 ---
 

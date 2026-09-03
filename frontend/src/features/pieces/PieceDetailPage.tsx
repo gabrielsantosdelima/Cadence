@@ -2,15 +2,21 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/problem'
 import { ErrorState, Spinner } from '../../components/states'
 import { statusLabel, statusTone } from '../../domain/display'
+import { LogSessionForm } from '../sessions/LogSessionForm'
+import { SessionList } from '../sessions/SessionList'
 import { PieceStats } from './PieceStats'
 import { StatusControl } from './StatusControl'
 import { useDeletePiece } from './useDeletePiece'
 import { usePiece } from './usePiece'
+import { useRecordRefresh } from './useRecordRefresh'
 
 export function PieceDetailPage() {
   const { pieceId } = useParams<{ pieceId: string }>()
   const { data: piece, isPending, error } = usePiece(pieceId ?? '')
   const { confirmAndDelete, isPending: isDeleting } = useDeletePiece(pieceId ?? '')
+  const { refresh: refreshRecord, isRefreshing: isRefreshingRecord } = useRecordRefresh(
+    pieceId ?? '',
+  )
 
   if (!pieceId) {
     return null
@@ -86,11 +92,31 @@ export function PieceDetailPage() {
       </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-slate-900">Practice record</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-900">Practice record</h2>
+          <button
+            type="button"
+            onClick={() => void refreshRecord()}
+            disabled={isRefreshingRecord}
+            className="text-xs font-medium text-slate-500 hover:text-slate-700 disabled:opacity-50"
+          >
+            {isRefreshingRecord ? 'Updating…' : 'Refresh'}
+          </button>
+        </div>
         <PieceStats record={piece.record} />
       </div>
 
       <StatusControl piece={piece} />
+
+      <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="text-sm font-semibold text-slate-900">Log a session</h2>
+        <LogSessionForm pieceId={pieceId} pieceTitle={piece.title} />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-slate-900">Session history</h2>
+        <SessionList pieceId={pieceId} />
+      </div>
     </div>
   )
 }
