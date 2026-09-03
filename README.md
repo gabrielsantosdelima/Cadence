@@ -45,6 +45,19 @@ linear walkthrough: create a piece, register a session against it, watch the
 piece update, then hit the failure cases (409 on premature mastery, 404s, 400
 on bad input).
 
+For the UI, in a third terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Serves on `http://localhost:5173`, the origin both APIs' CORS policy already
+allows (RNF10). `frontend/src/config.ts` defaults to `5001`/`5002`; copy
+`frontend/.env.example` to `frontend/.env.local` only if you need different
+ports.
+
 ---
 
 ## Endpoints
@@ -86,6 +99,31 @@ string, parsed case-insensitively (`"Polishing"`, `"Mastered"`, and so on).
 But response bodies always come back as strings (`piece.Status.ToString()`).
 So what you read is never what you write for those fields. That's a real
 asymmetry, not a typo.
+
+---
+
+## Frontend
+
+React + TypeScript, talking to both APIs directly, no BFF. Two base URLs,
+not one — `config.repertoireUrl` and `config.practiceUrl` in
+[config.ts](frontend/src/config.ts), never a literal port anywhere else in
+the client code.
+
+The enum asymmetry described above (`Endpoints`) is encoded once, in
+[enums.ts](frontend/src/domain/enums.ts): `genreToWireValue`,
+`difficultyToWireValue`, and `practiceFocusToWireValue` turn the string
+unions the rest of the UI works with into the integers the request bodies
+need, applied right before the fetch call in
+[repertoire.ts](frontend/src/api/repertoire.ts) and
+[practice.ts](frontend/src/api/practice.ts). Response bodies need no
+mapping — they're already strings. `ChangeStatusRequest.status` is the one
+field sent as-is, a string, matching the backend's `Enum.TryParse`.
+
+The other thing the UI can't paper over: after `POST /sessions` succeeds,
+the piece's practice record is updated by the RabbitMQ consumer, not by
+that request. No optimistic write pretends the record already caught up —
+the piece detail view is expected to refetch on a short delay instead,
+making the eventual consistency visible rather than hidden.
 
 ---
 
