@@ -138,6 +138,68 @@ where the poll window closes before the consumer finishes.
 
 ---
 
+## Frontend verification
+
+`npm run typecheck && npm run lint` in `frontend/` passes with 0 errors, 0
+warnings (`tsc -b` with the strict flags from T03, `eslint .` with no
+suppressions).
+
+Route wiring, traced by running `npm run dev` against this sandbox (no live
+Repertoire/Practice — Docker Desktop's engine isn't reachable here, same
+constraint as the backend walkthrough below) and driving the router
+directly: `/` (list), `/pieces/new` (create form), `/pieces/:id` (detail,
+renders `Spinner` while `usePiece` is pending, then either the piece or an
+`ErrorState`/not-found branch), `/pieces/:id/edit`, and an unmatched path
+(`NotFoundPage`) all render without a React error. What this sandbox can't
+prove is the data-dependent path — create → detail → edit → status change →
+log session — since every page past the form needs a `200` from `:5001` to
+render anything. Run it yourself:
+
+```bash
+docker compose up -d
+dotnet run --project src/Repertoire/Cadence.Repertoire.Api
+dotnet run --project src/Practice/Cadence.Practice.Api
+cd frontend && npm run dev
+```
+
+Then: add a piece → land on its detail page (`Backlog`, empty record) → Edit
+→ change composer → Save → back on detail with the new composer → Delete →
+back on `/` with the piece gone.
+
+**Eventual-consistency walkthrough (T51, mirrors backend §14).** On a piece's
+detail page, `LogSessionForm` submits through
+[`useCreateSession`](frontend/src/features/sessions/useCreateSession.ts),
+which on success invalidates the session list (immediate — Practice is
+local) and calls
+[`useRecordRefresh`](frontend/src/features/pieces/useRecordRefresh.ts)'s
+`refresh()`. That re-fetches the piece detail query at 800ms, 1.6s, and 3s,
+stopping as soon as `record.sessionCount` goes up. In a live run: log a
+session on a fresh `Backlog` piece, and within that window — no manual
+refresh — `PieceStats` updates (minutes, session count, average quality) and
+the status pill flips to `Learning`. Then the harder case: stop
+Repertoire.Api, log a session (still `201`, `SessionList` updates
+immediately since it never touched Repertoire), restart Repertoire.Api,
+click the "Refresh" button next to "Practice record" on the detail page
+(the T48 manual affordance, for when the poll window closed before the
+consumer caught up) — the record catches up.
+
+**409 walkthrough (T52).** `StatusControl` only offers targets
+[`allowedManualTargets`](frontend/src/domain/transitions.ts) says are legal,
+so a piece with `sessionCount === 0` never gets a "Move to Mastered" button
+— the UI can't provoke this 409 through its own controls by design. To see
+it anyway, call the backend directly: `PATCH :5001/pieces/{id}/status` with
+`{"status":"Mastered"}` on a never-practiced piece returns `409` with a
+domain `detail`; reloading that piece's detail page and using
+`changePieceStatus` from the browser console reproduces it through
+[`useChangeStatus`](frontend/src/features/pieces/useChangeStatus.ts), whose
+`meta.suppressGlobalErrorToast` keeps the generic toast from also firing —
+the failure surfaces once, inline, as `changeStatus.error`'s `detail` text
+under the status buttons in
+[`StatusControl.tsx`](frontend/src/features/pieces/StatusControl.tsx), not
+as a bare "Unexpected error."
+
+---
+
 ## Verification (RNF04, RNF05)
 
 Checked by inspection, current as of this commit:
