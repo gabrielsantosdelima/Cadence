@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
 import { CreatePiecePage } from '../features/pieces/CreatePiecePage'
 import { EditPiecePage } from '../features/pieces/EditPiecePage'
+import { PieceDetailPage } from '../features/pieces/PieceDetailPage'
 import { PiecesListPage } from '../features/pieces/PiecesListPage'
 
 function NotFoundPage() {
@@ -15,10 +16,6 @@ function NotFoundPage() {
   )
 }
 
-function PlaceholderPage({ label }: { label: string }) {
-  return <div className="text-slate-500">{label}</div>
-}
-
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -28,7 +25,7 @@ export const router = createBrowserRouter([
       { path: 'pieces/new', element: <CreatePiecePage /> },
       {
         path: 'pieces/:pieceId',
-        element: <PlaceholderPage label="Piece detail" />,
+        element: <PieceDetailPage />,
       },
       {
         path: 'pieces/:pieceId/edit',
