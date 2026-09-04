@@ -1,5 +1,6 @@
 using Cadence.Repertoire.Api.Consumers;
 using Cadence.Repertoire.Api.Endpoints;
+using Cadence.Repertoire.Api.Middleware;
 using Cadence.Repertoire.Domain;
 using Cadence.Repertoire.Infrastructure;
 using MassTransit;
@@ -59,6 +60,8 @@ using (IServiceScope migrationScope = app.Services.CreateScope())
 {
     migrationScope.ServiceProvider.GetRequiredService<RepertoireDbContext>().Database.Migrate();
 }
+
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseCors(FrontendCorsPolicy);
 

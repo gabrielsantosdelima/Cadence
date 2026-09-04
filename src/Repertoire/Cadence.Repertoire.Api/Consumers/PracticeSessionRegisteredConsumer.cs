@@ -26,46 +26,56 @@ namespace Cadence.Repertoire.Api.Consumers
             _logger = logger;
         }
 
+        private const string CorrelationIdHeaderName = "X-Correlation-ID";
+
         public async Task Consume(ConsumeContext<PracticeSessionRegistered> context)
         {
-            CancellationToken cancellationToken = context.CancellationToken;
-            Guid messageId = context.MessageId!.Value;
+            string correlationId = context.Headers.Get<string>(CorrelationIdHeaderName) ?? Guid.CreateVersion7().ToString();
 
-            bool alreadyProcessed = await _dbContext.ProcessedMessages
-                .AnyAsync(processedMessage => processedMessage.MessageId == messageId, cancellationToken);
-
-            if (alreadyProcessed)
-                return;
-
-            PracticeSessionRegistered integrationEvent = context.Message;
-            PieceId pieceId = PieceId.From(integrationEvent.PieceId);
-
-            Piece? piece = await _pieceRepository.GetAsync(pieceId, cancellationToken);
-            if (piece is null)
+            using (_logger.BeginScope(new Dictionary<string, object>
             {
-                _logger.LogWarning(
-                    "Ignoring PracticeSessionRegistered for unknown PieceId {PieceId} and SessionId {SessionId} (MessageId {MessageId})",
+                ["CorrelationId"] = correlationId
+            }))
+            {
+                CancellationToken cancellationToken = context.CancellationToken;
+                Guid messageId = context.MessageId!.Value;
+
+                bool alreadyProcessed = await _dbContext.ProcessedMessages
+                    .AnyAsync(processedMessage => processedMessage.MessageId == messageId, cancellationToken);
+
+                if (alreadyProcessed)
+                    return;
+
+                PracticeSessionRegistered integrationEvent = context.Message;
+                PieceId pieceId = PieceId.From(integrationEvent.PieceId);
+
+                Piece? piece = await _pieceRepository.GetAsync(pieceId, cancellationToken);
+                if (piece is null)
+                {
+                    _logger.LogWarning(
+                        "Ignoring PracticeSessionRegistered for unknown PieceId {PieceId} and SessionId {SessionId} (MessageId {MessageId})",
+                        integrationEvent.PieceId,
+                        integrationEvent.SessionId,
+                        messageId);
+                    return;
+                }
+
+                piece.RegisterPractice(
+                    integrationEvent.DurationMinutes,
+                    integrationEvent.QualityRating,
+                    integrationEvent.OrcurredAtUtc);
+
+                _dbContext.ProcessedMessages.Add(
+                    new ProcessedMessage(messageId, nameof(PracticeSessionRegisteredConsumer), DateTime.UtcNow));
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation(
+                    "Registered practice for PieceId {PieceId} from SessionId {SessionId} (MessageId {MessageId})",
                     integrationEvent.PieceId,
                     integrationEvent.SessionId,
                     messageId);
-                return;
             }
-
-            piece.RegisterPractice(
-                integrationEvent.DurationMinutes,
-                integrationEvent.QualityRating,
-                integrationEvent.OrcurredAtUtc);
-
-            _dbContext.ProcessedMessages.Add(
-                new ProcessedMessage(messageId, nameof(PracticeSessionRegisteredConsumer), DateTime.UtcNow));
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation(
-                "Registered practice for PieceId {PieceId} from SessionId {SessionId} (MessageId {MessageId})",
-                integrationEvent.PieceId,
-                integrationEvent.SessionId,
-                messageId);
         }
     }
 }

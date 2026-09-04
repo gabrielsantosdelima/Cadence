@@ -1,4 +1,6 @@
 using Cadence.Practice.Api.Endpoints;
+using Cadence.Practice.Api.Messaging;
+using Cadence.Practice.Api.Middleware;
 using Cadence.Practice.Domain;
 using Cadence.Practice.Infrastructure;
 using MassTransit;
@@ -16,6 +18,9 @@ builder.Services.AddDbContext<PracticeDbContext>(options =>
 
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped(typeof(CorrelationIdPublishFilter<>));
+
 builder.Services.AddMassTransit(busConfigurator =>
 {
     busConfigurator.SetKebabCaseEndpointNameFormatter();
@@ -23,6 +28,7 @@ builder.Services.AddMassTransit(busConfigurator =>
     busConfigurator.UsingRabbitMq((context, rabbitMqConfigurator) =>
     {
         rabbitMqConfigurator.Host(new Uri(rabbitMqConnectionString));
+        rabbitMqConfigurator.UsePublishFilter(typeof(CorrelationIdPublishFilter<>), context);
         rabbitMqConfigurator.ConfigureEndpoints(context);
     });
 });
@@ -47,6 +53,8 @@ using (IServiceScope migrationScope = app.Services.CreateScope())
 {
     migrationScope.ServiceProvider.GetRequiredService<PracticeDbContext>().Database.Migrate();
 }
+
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseCors(FrontendCorsPolicy);
 
