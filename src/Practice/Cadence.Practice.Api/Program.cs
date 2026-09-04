@@ -3,18 +3,26 @@ using Cadence.Practice.Api.Messaging;
 using Cadence.Practice.Api.Middleware;
 using Cadence.Practice.Domain;
 using Cadence.Practice.Infrastructure;
+using Cadence.Practice.Infrastructure.Migrations;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using RabbitMQ.Client;
+
+if (args.Contains("--migrate"))
+{
+    return await RunMigrationsAsync(args);
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
 const string FrontendCorsPolicy = "Frontend";
 string frontendOrigin = builder.Configuration["Cors:FrontendOrigin"] ?? "http://localhost:5173";
 string rabbitMqConnectionString = builder.Configuration.GetConnectionString("RabbitMq") ?? "amqp://admin:admin@localhost:5672";
+bool applyMigrationsOnStartup = builder.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup");
 
 builder.Services.AddDbContext<PracticeDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Practice") ?? "Data Source=practice.db"));
+    ConfigurePracticeDatabase(options, builder.Configuration));
 
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 
@@ -49,8 +57,9 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-using (IServiceScope migrationScope = app.Services.CreateScope())
+if (applyMigrationsOnStartup)
 {
+    using IServiceScope migrationScope = app.Services.CreateScope();
     migrationScope.ServiceProvider.GetRequiredService<PracticeDbContext>().Database.Migrate();
 }
 
@@ -62,3 +71,45 @@ app.MapSessionEndpoints();
 app.MapHealthChecks("/health");
 
 app.Run();
+return 0;
+
+static void ConfigurePracticeDatabase(DbContextOptionsBuilder options, IConfiguration configuration)
+{
+    string provider = configuration["Database:Provider"] ?? "Sqlite";
+
+    if (string.Equals(provider, "Postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseNpgsql(configuration.GetConnectionString("PracticePostgres")
+            ?? "Host=localhost;Port=5432;Database=cadence_practice;Username=cadence;Password=cadence");
+    }
+    else
+    {
+        options.UseSqlite(configuration.GetConnectionString("Practice") ?? "Data Source=practice.db");
+    }
+
+    options.ReplaceService<IMigrationsAssembly, ProviderFilteredMigrationsAssembly>();
+}
+
+static async Task<int> RunMigrationsAsync(string[] args)
+{
+    HostApplicationBuilder migrateBuilder = Host.CreateApplicationBuilder(args);
+
+    migrateBuilder.Services.AddDbContext<PracticeDbContext>(options =>
+        ConfigurePracticeDatabase(options, migrateBuilder.Configuration));
+
+    using IHost migrateHost = migrateBuilder.Build();
+    using IServiceScope migrateScope = migrateHost.Services.CreateScope();
+    PracticeDbContext dbContext = migrateScope.ServiceProvider.GetRequiredService<PracticeDbContext>();
+
+    List<string> pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+
+    if (pendingMigrations.Count == 0)
+    {
+        Console.WriteLine("No pending migrations.");
+        return 0;
+    }
+
+    await dbContext.Database.MigrateAsync();
+    Console.WriteLine($"Applied {pendingMigrations.Count} migration(s): {string.Join(", ", pendingMigrations)}");
+    return 0;
+}

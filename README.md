@@ -16,17 +16,33 @@ docker compose up -d
 ```
 
 Brings up RabbitMQ (AMQP on `5672`, management UI on `15672`, login
-`admin` / `admin`).
+`admin` / `admin`) and a PostgreSQL 17 instance (`5432`, two databases:
+`cadence_repertoire` and `cadence_practice`, login `cadence` / `cadence`).
+PostgreSQL is optional for local runs — SQLite is the default provider and
+needs nothing beyond the SDK. See
+[docs/postgres-migration.md](docs/postgres-migration.md) for switching a
+service over to PostgreSQL, including why migrating is a separate,
+explicit step rather than something that always happens on startup.
 
 ```bash
 dotnet run --project src/Repertoire/Cadence.Repertoire.Api
 dotnet run --project src/Practice/Cadence.Practice.Api
 ```
 
-Run each in its own terminal. Nothing else to install. Each API applies its
-own EF Core migration on startup (`Database.Migrate()` in `Program.cs`) and
-creates its own SQLite file (`repertoire.db`, `practice.db`) next to the
-project on first run.
+Run each in its own terminal. Nothing else to install. `Database:Provider`
+in `appsettings.json` (`Sqlite` by default) picks the provider; against
+SQLite each API creates its own file (`repertoire.db`, `practice.db`) next
+to the project on first run. `Database:ApplyMigrationsOnStartup` is `true`
+in `appsettings.Development.json` (what `dotnet run` uses), so the local
+loop above still "just works" — the API migrates itself the first time it
+starts. It's `false` by default otherwise: two instances of the same
+service racing to migrate the same database on startup is exactly the
+failure mode blue/green deployment invites, so outside Development migrating
+is a deliberate, separate step:
+
+```bash
+dotnet run --project src/Repertoire/Cadence.Repertoire.Api -- --migrate
+```
 
 | Service | Port | Health check |
 |---|---|---|
