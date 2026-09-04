@@ -6,6 +6,7 @@ using Cadence.Repertoire.Infrastructure;
 using Cadence.Repertoire.Infrastructure.Migrations;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
 using RabbitMQ.Client;
@@ -104,6 +105,9 @@ static void ConfigureRepertoireDatabase(DbContextOptionsBuilder options, IConfig
     }
 
     options.ReplaceService<IMigrationsAssembly, ProviderFilteredMigrationsAssembly>();
+
+    if (configuration.GetValue<bool>("Database:LogSql"))
+        options.LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information);
 }
 
 static async Task<int> RunMigrationsAsync(string[] args)

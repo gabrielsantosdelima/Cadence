@@ -97,6 +97,9 @@ static void ConfigurePracticeDatabase(DbContextOptionsBuilder options, IConfigur
     }
 
     options.ReplaceService<IMigrationsAssembly, ProviderFilteredMigrationsAssembly>();
+
+    if (configuration.GetValue<bool>("Database:LogSql"))
+        options.LogTo(Console.WriteLine, [DbLoggerCategory.Database.Command.Name], LogLevel.Information);
 }
 
 static async Task<int> RunMigrationsAsync(string[] args)
