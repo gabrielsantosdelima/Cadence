@@ -388,7 +388,7 @@ or the request fails outright, or the event is silently dropped, and
 nothing recorded anywhere says "this session's event was supposed to be
 published and wasn't." The system is left with a `PracticeSession` in
 `practice.db` that Repertoire may never learn about. That's the exact gap
-documented in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
+the outbox pattern exists to close.
 
 The outbox pattern changes this by moving the publish out of the request
 path entirely. `SaveChangesAsync` would write both the `PracticeSession` row
