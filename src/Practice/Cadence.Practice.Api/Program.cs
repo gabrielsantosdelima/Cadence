@@ -7,6 +7,7 @@ using Cadence.Practice.Infrastructure.Migrations;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql;
 using RabbitMQ.Client;
 
 if (args.Contains("--migrate"))
@@ -21,7 +22,7 @@ string frontendOrigin = builder.Configuration["Cors:FrontendOrigin"] ?? "http://
 string rabbitMqConnectionString = builder.Configuration.GetConnectionString("RabbitMq") ?? "amqp://admin:admin@localhost:5672";
 bool applyMigrationsOnStartup = builder.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup");
 
-builder.Services.AddDbContext<PracticeDbContext>(options =>
+builder.Services.AddDbContextPool<PracticeDbContext>(options =>
     ConfigurePracticeDatabase(options, builder.Configuration));
 
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
@@ -79,8 +80,16 @@ static void ConfigurePracticeDatabase(DbContextOptionsBuilder options, IConfigur
 
     if (string.Equals(provider, "Postgres", StringComparison.OrdinalIgnoreCase))
     {
-        options.UseNpgsql(configuration.GetConnectionString("PracticePostgres")
-            ?? "Host=localhost;Port=5432;Database=cadence_practice;Username=cadence;Password=cadence");
+        NpgsqlConnectionStringBuilder connectionStringBuilder = new(
+            configuration.GetConnectionString("PracticePostgres")
+                ?? "Host=localhost;Port=5432;Database=cadence_practice;Username=cadence;Password=cadence")
+        {
+            MaxPoolSize = configuration.GetValue("Database:Postgres:MaxPoolSize", 20),
+            MinPoolSize = configuration.GetValue("Database:Postgres:MinPoolSize", 2),
+            Timeout = configuration.GetValue("Database:Postgres:TimeoutSeconds", 5)
+        };
+
+        options.UseNpgsql(connectionStringBuilder.ConnectionString);
     }
     else
     {
